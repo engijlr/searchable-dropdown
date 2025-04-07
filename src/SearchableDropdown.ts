@@ -34,6 +34,7 @@ export class SearchableDropdown extends LitElement {
       position: absolute;
       width: 100%;
       z-index: 1000;
+      animation: fadeIn 0.3s ease-in-out;
     }
     .options.open {
       display: flex;
@@ -55,11 +56,25 @@ export class SearchableDropdown extends LitElement {
     .option:hover {
       background-color: #eee;
     }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-5px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
   `;
 
   @state()
   private open = false;
-  @state() private selectedOption = "Select an option";
+  //@state() private selectedOption = "Select an option";
+  //5)Make selectedOption a property to be able to set it from the outside
+  @property({ type: String })
+  selectedOption = "Select an option";
   @state()
   private searchTerm = "";
 
@@ -73,6 +88,15 @@ export class SearchableDropdown extends LitElement {
     this.selectedOption = option;
     this.open = false;
     this.searchTerm = "";
+
+    //6)Emit an event when the selected option changes
+    this.dispatchEvent(
+      new CustomEvent("onSelectOption", {
+        detail: { option },
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 
   //3)Make options dynamic
@@ -85,27 +109,43 @@ export class SearchableDropdown extends LitElement {
     this.searchTerm = target.value.toLowerCase();
   }
 
-  render() {
-    const filteredOptions = this.options.filter((option) =>
+  private get filteredOptions() {
+    return this.options.filter((option) =>
       option.toLowerCase().includes(this.searchTerm)
     );
+  }
 
-    return html`<div class="dropdown">
+  render() {
+    const filteredOptions = this.filteredOptions;
+
+    return html`<div
+      class="dropdown"
+      role="combobox"
+      aria-haspopup="listbox"
+      aria-expanded=${this.open}
+      aria-label="Searchable dropdown"
+    >
       <div class="selected" @click=${this.toggleDropdown}>
         ${this.selectedOption}
       </div>
 
-      <div class="options ${this.open ? "open" : ""}">
+      <div class="options ${this.open ? "open" : ""}" role="listbox">
         <input
           class="search-input"
           type="text"
           placeholder="Search..."
+          aria-label="Search options"
           .value=${this.searchTerm}
           @input=${this.handleSearch}
         />
         ${filteredOptions.map(
           (option) => html`
-            <div class="option" @click=${() => this.selectOption(option)}>
+            <div
+              class="option"
+              @click=${() => this.selectOption(option)}
+              role="option"
+              aria-selected=${this.selectedOption === option}
+            >
               ${option}
             </div>
           `
